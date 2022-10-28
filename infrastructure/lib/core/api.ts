@@ -1,12 +1,16 @@
-import * as cdk from '@aws-cdk/core';
-import * as lambda from '@aws-cdk/aws-lambda';
-import * as apigw from '@aws-cdk/aws-apigatewayv2';
-import * as cognito from '@aws-cdk/aws-cognito';
-import { CorsHttpMethod, HttpMethod } from '@aws-cdk/aws-apigatewayv2';
-import { HttpUserPoolAuthorizer } from '@aws-cdk/aws-apigatewayv2-authorizers';
-import * as apigi from '@aws-cdk/aws-apigatewayv2-integrations';
-import * as iam from '@aws-cdk/aws-iam';
-import * as sqs from '@aws-cdk/aws-sqs';
+import { Construct } from 'constructs';
+import {
+  aws_lambda as lambda,
+  aws_cognito as cognito,
+  aws_iam as iam,
+  aws_sqs as sqs,
+  aws_apigatewayv2 as apigv2_cfn,
+  CfnOutput,
+  Duration,
+} from 'aws-cdk-lib';
+import * as apigv2 from '@aws-cdk/aws-apigatewayv2-alpha';
+import { HttpUserPoolAuthorizer } from '@aws-cdk/aws-apigatewayv2-authorizers-alpha';
+import { HttpLambdaIntegration } from '@aws-cdk/aws-apigatewayv2-integrations-alpha';
 
 interface ApplicationAPIProps {
   commentsService: lambda.IFunction;
@@ -16,41 +20,43 @@ interface ApplicationAPIProps {
   userPoolClient: cognito.IUserPoolClient;
 }
 
-export class ApplicationAPI extends cdk.Construct {
-  public readonly httpApi: apigw.HttpApi;
+export class ApplicationAPI extends Construct {
+  public readonly httpApi: apigv2.HttpApi;
 
-  constructor(scope: cdk.Construct, id: string, props: ApplicationAPIProps) {
+  constructor(scope: Construct, id: string, props: ApplicationAPIProps) {
     super(scope, id);
 
     const serviceMethods = [
-      HttpMethod.GET,
-      HttpMethod.POST,
-      HttpMethod.DELETE,
-      HttpMethod.PUT,
-      HttpMethod.PATCH,
+      apigv2.HttpMethod.GET,
+      apigv2.HttpMethod.POST,
+      apigv2.HttpMethod.DELETE,
+      apigv2.HttpMethod.PUT,
+      apigv2.HttpMethod.PATCH,
     ];
 
     // API Gateway ------------------------------------------------------
 
-    this.httpApi = new apigw.HttpApi(this, 'HttpProxyApi', {
+    this.httpApi = new apigv2.HttpApi(this, 'HttpProxyApi', {
       apiName: 'serverless-api',
       createDefaultStage: true,
       corsPreflight: {
         allowHeaders: ['Authorization', 'Content-Type', '*'],
         allowMethods: [
-          CorsHttpMethod.GET,
-          CorsHttpMethod.POST,
-          CorsHttpMethod.DELETE,
-          CorsHttpMethod.PUT,
-          CorsHttpMethod.PATCH,
+          apigv2.CorsHttpMethod.GET,
+          apigv2.CorsHttpMethod.POST,
+          apigv2.CorsHttpMethod.DELETE,
+          apigv2.CorsHttpMethod.PUT,
+          apigv2.CorsHttpMethod.PATCH,
         ],
         allowOrigins: ['http://localhost:3000', 'https://*'],
         allowCredentials: true,
-        maxAge: cdk.Duration.days(10),
+        maxAge: Duration.days(10),
       },
     });
 
     // Authorizer -------------------------------------------------------
+
+    // const authorizer = new HttpUserPoolAuthorizer('Authorizer', props.userPool);
 
     const authorizer = new HttpUserPoolAuthorizer('Authorizer', props.userPool, {
       userPoolClients: [props.userPoolClient],
@@ -58,8 +64,10 @@ export class ApplicationAPI extends cdk.Construct {
 
     // Comments Service -------------------------------------------------
 
-    const commentsServiceIntegration = new apigi.HttpLambdaIntegration('CommentsServiceIntegration',
-      props.commentsService, {});
+    const commentsServiceIntegration = new HttpLambdaIntegration(
+      'CommentsIntegration',
+      props.commentsService,
+    );
 
     this.httpApi.addRoutes({
       path: `/comments/{proxy+}`,
@@ -70,8 +78,11 @@ export class ApplicationAPI extends cdk.Construct {
 
     // Documents Service ------------------------------------------------
 
-    const documentsServiceIntegration = new apigi.HttpLambdaIntegration('DocumentsServiceIntegration',
-    props.documentsService, {});
+    const documentsServiceIntegration = new HttpLambdaIntegration(
+      'DocumentsServiceIntegration',
+      props.documentsService,
+      {},
+    );
 
     this.httpApi.addRoutes({
       path: `/documents/{proxy+}`,
@@ -80,10 +91,9 @@ export class ApplicationAPI extends cdk.Construct {
       authorizer,
     });
 
-    // Users Service ------------------------------------------------------
+    // // Users Service ------------------------------------------------------
 
-    const usersServiceIntegration = new apigi.HttpLambdaIntegration('UsersServiceIntegration',
-    props.usersService, {});
+    const usersServiceIntegration = new HttpLambdaIntegration('UsersIntegration', props.usersService);
 
     this.httpApi.addRoutes({
       path: `/users/{proxy+}`,
@@ -92,7 +102,7 @@ export class ApplicationAPI extends cdk.Construct {
       authorizer,
     });
 
-    // Moderate ----------------------------------------------------------
+    // // Moderate ----------------------------------------------------------
 
     const queue = new sqs.Queue(this, 'ModerationQueue');
 
@@ -107,7 +117,7 @@ export class ApplicationAPI extends cdk.Construct {
       }),
     );
 
-    const sqsIntegration = new apigw.CfnIntegration(this, 'ModerateIntegration', {
+    const sqsIntegration = new apigv2_cfn.CfnIntegration(this, 'ModerateIntegration', {
       apiId: this.httpApi.apiId,
       integrationType: 'AWS_PROXY',
       integrationSubtype: 'SQS-SendMessage',
@@ -120,16 +130,16 @@ export class ApplicationAPI extends cdk.Construct {
       timeoutInMillis: 10000,
     });
 
-    new apigw.CfnRoute(this, 'ModerateRoute', {
+    new apigv2_cfn.CfnRoute(this, 'ModerateRoute', {
       apiId: this.httpApi.apiId,
       routeKey: 'POST /moderate',
       target: `integrations/${sqsIntegration.ref}`,
     });
 
-    // Outputs -----------------------------------------------------------
+    // // Outputs -----------------------------------------------------------
 
-    new cdk.CfnOutput(this, 'URL', {
-      value: this.httpApi.apiEndpoint
+    new CfnOutput(this, 'URL', {
+      value: this.httpApi.apiEndpoint,
     });
   }
 }

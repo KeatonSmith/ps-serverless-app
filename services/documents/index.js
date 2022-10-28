@@ -17,6 +17,7 @@ import {
   RouterType,
   Matcher,
   enforceGroupMembership,
+  getLogger,
 } from 'lambda-micro';
 import { AWSClients, generateID } from '../common';
 
@@ -81,6 +82,10 @@ const createSignedS3URL = async unsignedURL => {
 
 // Get all documents
 const getAllDocuments = async (request, response) => {
+  const logger = getLogger(request.event, request.context);
+  logger.trace('Sample trace');
+  logger.trace('Sample error');
+
   const params = {
     TableName: tableName,
     IndexName: 'GSI1',
@@ -149,7 +154,7 @@ const createDocument = async (request, response) => {
       contentType: file.contentType,
       fileName: file.fileName,
     },
-    Owner: request.event.requestContext.authorizer.jwt.claims.username,
+    Owner: 'fc4cec10-6ae4-435c-98ca-6964382fee77', // Hard-coded until we put users in place
     Name: fields.name,
   };
 
@@ -173,19 +178,15 @@ const createDocument = async (request, response) => {
 //------------------------------------------------------------------------
 
 /*
-
-  This uses a custom Lambda container that I have created that is very 
-  similar to what I use for my projects in production (with the only
-  exception being that it is JavaScript and not TypeScript). I have
-  released this as an npm package, lambda-micro, and you can view it
-  at the link below.
-
-  This is similar to what you can do with something like Express, but it 
-  doesn't have the weight of using Express fully.
-
-  https://github.com/davidtucker/lambda-micro
-
-*/
+   This uses a custom Lambda container that I have created that is very 
+   similar to what I use for my projects in production (with the only
+   exception being that it is JavaScript and not TypeScript). I have
+   released this as an npm package, lambda-micro, and you can view it
+   at the link below.
+   This is similar to what you can do with something like Express, but it 
+   doesn't have the weight of using Express fully.
+   https://github.com/davidtucker/lambda-micro
+ */
 const router = createRouter(RouterType.HTTP_API_V2);
 router.add(Matcher.HttpApiV2('GET', '/documents/'), getAllDocuments);
 router.add(

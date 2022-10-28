@@ -1,15 +1,10 @@
 /*
-
   Pluralsight Serverless Development Path (https://tuck.cc/serverlessDev)
   Author: David Tucker (davidtucker.net)
-
   ---
-
   Comments Service
-
   This Lambda function handles all interactions for comments in the document
   management system application (create, delete, get).
-
 */
 import {
   createRouter,
@@ -54,7 +49,7 @@ const getAllCommentsForDocument = async (request, response) => {
 
 // Creates a new comment for a document
 const createComment = async (request, response) => {
-  const userId = request.event.requestContext.authorizer.jwt.claims.username;
+  const userId =  request.event.requestContext.authorizer.jwt.claims.username; // Hard-coded until we put users in place
   const commentId = `Comment#${generateID()}`;
   const item = {
     PK: request.pathVariables.docid,
@@ -69,6 +64,7 @@ const createComment = async (request, response) => {
     ReturnValues: 'NONE',
   };
   await dynamoDB.put(params).promise();
+
 
   // Send comment event using Eventbridge
   // This will allow us to connect into this event for notifications
@@ -88,7 +84,7 @@ const createComment = async (request, response) => {
     ],
   };
   await eventbridge.putEvents(eventParams).promise();
-
+  
   return response.output(item, 200);
 };
 
@@ -110,19 +106,15 @@ const deleteComment = async (request, response) => {
 //------------------------------------------------------------------------
 
 /*
-
-  This uses a custom Lambda container that I have created that is very 
-  similar to what I use for my projects in production (with the only
-  exception being that it is JavaScript and not TypeScript). I have
-  released this as an npm package, lambda-micro, and you can view it
-  at the link below.
-
-  This is similar to what you can do with something like Express, but it 
-  doesn't have the weight of using Express fully.
-
-  https://github.com/davidtucker/lambda-micro
-
-*/
+    This uses a custom Lambda container that I have created that is very 
+    similar to what I use for my projects in production (with the only
+    exception being that it is JavaScript and not TypeScript). I have
+    released this as an npm package, lambda-micro, and you can view it
+    at the link below.
+    This is similar to what you can do with something like Express, but it 
+    doesn't have the weight of using Express fully.
+    https://github.com/davidtucker/lambda-micro
+  */
 const router = createRouter(RouterType.HTTP_API_V2);
 
 // Get all comments for a document

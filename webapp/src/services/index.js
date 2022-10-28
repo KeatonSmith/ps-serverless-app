@@ -146,36 +146,24 @@ export const updateCurrentUserProfile = async (name, shouldDeletePicture, pictur
 // Comments --------------------------------------------------------------
 
 export const createComment = async (id, content) => {
-  if (!id) {
-    throw new Error('Must have document ID');
-  }
-  if (!client) {
-    await createAPIClient();
-  }
   const body = {
     Comment: content,
   };
-  const results = await client.post(`${SERVICES_HOST}/comments/${id}`, body);
+  const results = await axios.post(`${SERVICES_HOST}/comments/${id}`, body);
   console.log(`Results: ${JSON.stringify(results)}`);
 };
 
 export const getCommentsForDocument = async (id) => {
-  if (!client) {
-    await createAPIClient();
-  }
-  const results = await client.get(`${SERVICES_HOST}/comments/${id}`);
+  const results = await axios.get(`${SERVICES_HOST}/comments/${id}`);
   const sortedResults = results.data.sort((a, b) => new Date(b.DateAdded) - new Date(a.DateAdded));
   return sortedResults;
 };
 
 export const reportCommentForModeration = async (id) => {
-  if (!client) {
-    await createAPIClient();
-  }
   const body = {
     CommentId: id,
   };
-  await client.post(`${SERVICES_HOST}/moderate/`, body);
+  await axios.post(`${SERVICES_HOST}/moderate`, body);
 };
 
 /* eslint-enable no-console */

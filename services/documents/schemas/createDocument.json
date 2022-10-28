@@ -28,9 +28,7 @@
         },
         "contentType": {
           "type": "string",
-          "enum": [
-            "application/pdf"
-          ]
+          "enum": ["application/pdf"]
         },
         "encoding": {
           "type": "string",
@@ -42,13 +40,7 @@
         }
       },
       "additionalProperties": false,
-      "required": [
-        "content",
-        "fileName",
-        "contentType",
-        "encoding",
-        "fieldName"
-      ]
+      "required": ["content", "fileName", "contentType", "encoding", "fieldName"]
     },
     "fieldsDefinition": {
       "type": "object",
@@ -61,9 +53,7 @@
           "minLength": 1
         }
       },
-      "required": [
-        "name"
-      ],
+      "required": ["name"],
       "additionalProperties": false
     }
   }
